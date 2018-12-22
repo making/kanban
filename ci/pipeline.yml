@@ -5,6 +5,11 @@ resource_types:
   source:
     repository: nulldriver/maven-resource
     tag: latest
+- name: pivnet
+  type: registry-image
+  source:
+    repository: pivotalcf/pivnet-resource
+    tag: latest-final
 
 resources:
 - name: ci-utils
@@ -12,6 +17,7 @@ resources:
   source:
     uri: https://github.com/making/ci-utils.git
     branch: master
+# GitHub Release
 - name: concourse
   type: github-release
   check_every: 30m
@@ -33,6 +39,7 @@ resources:
     owner: coreos
     repository: prometheus-operator
     access_token: ((github-access-token))
+# Maven
 - name: spring-boot
   type: maven
   check_every: 30m
@@ -51,6 +58,12 @@ resources:
   source:
     url: https://repo.spring.io/milestone
     artifact: org.springframework.cloud:spring-cloud-dependencies:pom
+# Pivnet
+- name: pks
+  type: pivnet
+  source:
+    api_token: ((pivnet_api_token))
+    product_slug: pivotal-container-service
 
 jobs:
 # GitHub Release => GitHub issue
@@ -198,6 +211,25 @@ jobs:
     params:
       ISSUE_USER: making-bot
       ISSUE_COMPONENT: spring-cloud/spring-cloud-build
+      ISSUE_REPO: making/kanban
+      GITHUB_API_TOKEN:  ((github-access-token))
+    file: ci-utils/tasks/generate-gh-issue.yml 
+
+# Pivnet => GitHub issue
+
+- name: check-pks-version
+  plan:
+  - aggregate:
+    - get: release
+      resource: pks
+      trigger: true
+      params:
+        globs: []
+    - get: ci-utils
+  - task: generate-gh-issue
+    params:
+      ISSUE_USER: making-bot
+      ISSUE_COMPONENT: Pivotal Container Service
       ISSUE_REPO: making/kanban
       GITHUB_API_TOKEN:  ((github-access-token))
     file: ci-utils/tasks/generate-gh-issue.yml 
